@@ -1,13 +1,16 @@
 import { GoogleGenAI } from "@google/genai";
 import express from "express";
 import cors from "cors";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const app = express();
 app.use(express.json());
 app.use(cors());
 
 const ai = new GoogleGenAI({
-  apiKey: "AIzaSyDXYVqzIMkxRWjBiZSI30sldH_EdpZ2LoQ",
+  apiKey: process.env.API_KEY,
 });
 
 const systemIns = `
@@ -37,16 +40,28 @@ Tell them it's a waste of your time and to ask a real CS question.
 
 Stay in character at all times. You are here to build a competent computer scientist, not a friend.`;
 
+const chatHistory = [];
+
 app.post("/getRes", async (req, res) => {
   try {
     const { query } = req.body;
 
+    chatHistory.push({
+      role: "user",
+      parts: [{ text: query }],
+    });
+
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
-      contents: query,
+      contents: chatHistory,
       config: {
         systemInstruction: systemIns,
       },
+    });
+
+    chatHistory.push({
+      role: "model",
+      parts: [{ text: response.text }],
     });
 
     return res.status(200).json({
